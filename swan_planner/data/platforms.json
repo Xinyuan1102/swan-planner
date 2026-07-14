@@ -1,0 +1,34 @@
+{
+  "platforms": [
+    {
+      "id": "UAV-01", "kind": "air", "spec": "四旋翼 · 光电吊舱",
+      "battery": 86, "pos": [0.28, 0.20], "status": "待命",
+      "capabilities": ["aerial_survey", "eo_imaging", "target_track"],
+      "payload_kg": 0, "endurance_min": 38, "max_speed_ms": 18, "sensors": ["EO"]
+    },
+    {
+      "id": "UAV-02", "kind": "air", "spec": "四旋翼 · SAR",
+      "battery": 78, "pos": [0.36, 0.27], "status": "待命",
+      "capabilities": ["aerial_survey", "sar_imaging", "target_confirm"],
+      "payload_kg": 0, "endurance_min": 32, "max_speed_ms": 16, "sensors": ["SAR"]
+    },
+    {
+      "id": "UGV-03", "kind": "ground", "spec": "六轮 · 载荷 40kg",
+      "battery": 64, "pos": [0.56, 0.74], "status": "待命",
+      "capabilities": ["transport", "ground_nav", "obstacle_detect"],
+      "payload_kg": 40, "endurance_min": 120, "max_speed_ms": 6, "sensors": ["LiDAR", "EO"]
+    },
+    {
+      "id": "UAV-04", "kind": "air", "spec": "四旋翼 · 中继护航",
+      "battery": 31, "pos": [0.56, 0.67], "status": "待命",
+      "capabilities": ["comm_relay", "escort", "recon"],
+      "payload_kg": 2, "endurance_min": 24, "max_speed_ms": 20, "sensors": ["EO"]
+    },
+    {
+      "id": "UGV-05", "kind": "ground", "spec": "履带 · 侦察搬运",
+      "battery": 92, "pos": [0.16, 0.89], "status": "待命",
+      "capabilities": ["transport", "ground_recon", "obstacle_detect"],
+      "payload_kg": 25, "endurance_min": 150, "max_speed_ms": 4, "sensors": ["EO", "LiDAR"]
+    }
+  ]
+}

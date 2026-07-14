@@ -1,0 +1,53 @@
+{
+  "ao": { "name": "作战区域 AO", "size_m": [1000, 620] },
+
+  "zones": [
+    {
+      "id": "z_survey", "name": "A 区 · 侦察", "type": "survey",
+      "poly": [[0.130, 0.119], [0.380, 0.119], [0.420, 0.410], [0.180, 0.481]],
+      "ceiling_m": null, "priority": "P1",
+      "objective": "侦察 A 区并定位可疑目标"
+    },
+    {
+      "id": "z_deliv", "name": "B 点 · 补给", "type": "delivery",
+      "poly": [[0.710, 0.640], [0.880, 0.640], [0.880, 0.840], [0.710, 0.840]],
+      "ceiling_m": null, "ground_access": true, "priority": "P1",
+      "cargo_kg": 30, "objective": "保障 B 点物资运输"
+    },
+    {
+      "id": "z_nofly", "name": "禁飞区", "type": "no_fly",
+      "poly": [[0.500, 0.319], [0.620, 0.290], [0.660, 0.500], [0.520, 0.540]],
+      "ceiling_m": 120
+    }
+  ],
+
+  "objects": [
+    { "id": "bld_01", "name": "建筑群_01", "type": "building", "pos": [0.460, 0.250], "height_m": 42, "radius_m": 30 },
+    { "id": "tgt_01", "name": "可疑目标", "type": "target", "pos": [0.580, 0.410], "confidence": 0.71, "threat": "med" },
+    { "id": "route_main", "name": "通路_主干道", "type": "route", "pos": [0.800, 0.431] },
+    { "id": "open_01", "name": "开阔地", "type": "terrain", "pos": [0.360, 0.540], "comm_blind": true },
+    { "id": "obs_02", "name": "障碍_02", "type": "obstacle", "pos": [0.555, 0.739], "radius_m": 45 },
+    { "id": "origin", "name": "出发点", "type": "origin", "pos": [0.200, 0.800] },
+    { "id": "g1", "name": "G1", "type": "waypoint", "pos": [0.330, 0.758] },
+    { "id": "g2", "name": "G2", "type": "waypoint", "pos": [0.470, 0.739] },
+    { "id": "gU", "name": "GU · 上绕", "type": "waypoint", "pos": [0.555, 0.645] },
+    { "id": "g4", "name": "G4", "type": "waypoint", "pos": [0.640, 0.739] },
+    { "id": "g5", "name": "G5", "type": "waypoint", "pos": [0.740, 0.739] },
+    { "id": "gb", "name": "补给入口", "type": "waypoint", "pos": [0.810, 0.742] }
+  ],
+
+  "ground_edges": [
+    ["origin", "g1"], ["g1", "g2"], ["g2", "g4"], ["g2", "gU"], ["gU", "g4"],
+    ["g4", "g5"], ["g5", "gb"]
+  ],
+
+  "overlay_edges": [
+    ["bld_01", "tgt_01"], ["bld_01", "open_01"], ["tgt_01", "open_01"],
+    ["tgt_01", "route_main"], ["open_01", "origin"], ["origin", "route_main"]
+  ],
+
+  "constraints": [
+    { "type": "no_fly", "ref": "z_nofly", "desc": "规避禁飞区(天花板 120m)" },
+    { "type": "comm", "ref": "open_01", "desc": "开阔地存在通信盲区" }
+  ]
+}

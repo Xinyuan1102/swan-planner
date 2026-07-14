@@ -37,13 +37,22 @@ class MapView(QGraphicsView):
         self.setStyleSheet(f"border:none;background:#0A1019;")
         self._groups = groups
 
+        self._plat_items: list = []     # 平台标记项(便于重绘)
+
         self._draw_grid()
         self._layer_zones = self._draw_zones()
         self._layer_paths = self._draw_paths()
         self._layer_graph = self._draw_graph()
-        self._draw_platforms()          # 平台始终显示
+        self.set_platforms([g for grp in groups for g in grp.members])
 
         self.set_view("sit")
+
+    def set_platforms(self, platforms):
+        """按分配结果重绘平台标记。"""
+        for it in self._plat_items:
+            self._scene.removeItem(it)
+        self._plat_items.clear()
+        self._draw_platforms(platforms)
 
     # ---- 背景栅格 ----
     def _draw_grid(self):
@@ -129,28 +138,29 @@ class MapView(QGraphicsView):
         return grp
 
     # ---- 平台标记 ----
-    def _draw_platforms(self):
-        for g in self._groups:
-            for p in g.members:
-                x, y = p.x * W, p.y * H
-                col = C.AIR if p.kind == "air" else C.GROUND
-                if p.status == "待命":
-                    col = "#3A4C63"
-                if p.kind == "air":
-                    tri = QPolygonF([QPointF(x, y - 9), QPointF(x + 8, y + 7), QPointF(x - 8, y + 7)])
-                    item = QGraphicsPolygonItem(tri)
-                else:
-                    item = QGraphicsPolygonItem(QPolygonF([
-                        QPointF(x - 7, y - 7), QPointF(x + 7, y - 7),
-                        QPointF(x + 7, y + 7), QPointF(x - 7, y + 7)]))
-                item.setBrush(QBrush(QColor(col)))
-                item.setPen(_pen("#0A1019", 1.0))
-                self._scene.addItem(item)
-                lab = QGraphicsSimpleTextItem(p.pid)
-                lab.setBrush(QColor(col).lighter(140))
-                lab.setFont(QFont("IBM Plex Mono", 8))
-                lab.setPos(x + 11, y - 7)
-                self._scene.addItem(lab)
+    def _draw_platforms(self, platforms):
+        for p in platforms:
+            x, y = p.x * W, p.y * H
+            col = C.AIR if p.kind == "air" else C.GROUND
+            if p.status == "待命":
+                col = "#3A4C63"
+            if p.kind == "air":
+                tri = QPolygonF([QPointF(x, y - 9), QPointF(x + 8, y + 7), QPointF(x - 8, y + 7)])
+                item = QGraphicsPolygonItem(tri)
+            else:
+                item = QGraphicsPolygonItem(QPolygonF([
+                    QPointF(x - 7, y - 7), QPointF(x + 7, y - 7),
+                    QPointF(x + 7, y + 7), QPointF(x - 7, y + 7)]))
+            item.setBrush(QBrush(QColor(col)))
+            item.setPen(_pen("#0A1019", 1.0))
+            self._scene.addItem(item)
+            self._plat_items.append(item)
+            lab = QGraphicsSimpleTextItem(p.pid)
+            lab.setBrush(QColor(col).lighter(140))
+            lab.setFont(QFont("IBM Plex Mono", 8))
+            lab.setPos(x + 11, y - 7)
+            self._scene.addItem(lab)
+            self._plat_items.append(lab)
 
     # ---- 视图切换 ----
     def set_view(self, view: str):
@@ -199,3 +209,6 @@ class SituationMap(Card):
             lg.addWidget(box)
         lg.addStretch(1)
         self.body.addWidget(legend)
+
+    def set_platforms(self, platforms):
+        self.map.set_platforms(platforms)

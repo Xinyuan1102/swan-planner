@@ -103,28 +103,45 @@ class GroupCard(QFrame):
 class GroupTree(Card):
     groupSelected = Signal(str)
 
-    def __init__(self, groups: list[Group]):
+    def __init__(self, groups: list[Group] = None):
         super().__init__("集群编组", icon="◈")
         tier = QLabel("顶层 · Qwen3.6-27B"); tier.setObjectName("TierTag")
         self.add_header_widget(tier)
 
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        inner = QWidget()
-        v = QVBoxLayout(inner); v.setContentsMargins(8, 8, 8, 8); v.setSpacing(8)
+        self._inner = QWidget()
+        self._v = QVBoxLayout(self._inner)
+        self._v.setContentsMargins(8, 8, 8, 8); self._v.setSpacing(8)
+        self._v.addStretch(1)
+        scroll.setWidget(self._inner)
+        self.body.addWidget(scroll)
+
         self._cards: dict[str, GroupCard] = {}
-        for g in groups:
+        self._selected: str | None = None
+        if groups:
+            self.set_groups(groups)
+
+    def set_groups(self, groups: list[Group]):
+        """用分配结果重建分组卡片(保持当前选中项若仍存在)。"""
+        # 清空现有卡片(保留末尾 stretch)
+        while self._v.count() > 1:
+            it = self._v.takeAt(0)
+            if it.widget():
+                it.widget().deleteLater()
+        self._cards.clear()
+        for i, g in enumerate(groups):
             card = GroupCard(g)
             card.clicked.connect(self._on_select)
             self._cards[g.gid] = card
-            v.addWidget(card)
-        v.addStretch(1)
-        scroll.setWidget(inner)
-        self.body.addWidget(scroll)
-
-        if groups:
-            self._on_select(groups[0].gid)
+            self._v.insertWidget(i, card)
+        # 选中项:沿用旧的,否则选第一个
+        keep = self._selected if self._selected in self._cards else (
+            groups[0].gid if groups else None)
+        if keep:
+            self._on_select(keep)
 
     def _on_select(self, gid: str):
+        self._selected = gid
         for k, c in self._cards.items():
             c.set_selected(k == gid)
         self.groupSelected.emit(gid)

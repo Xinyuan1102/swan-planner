@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PySide6.QtCore import Qt
 
 from ..config import C
-from ..models.mock_llm import PlanResult, ReasoningNode, TaskItem
+from ..models.planner import PlanResult, ReasoningNode, TaskItem
 from .common import Card
 
 

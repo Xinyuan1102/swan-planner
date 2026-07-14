@@ -1,25 +1,34 @@
-"""数据模型与场景种子数据。
+"""领域对象与数据加载。
 
-这里定义系统的领域对象(平台 / 分组 / 任务 / 场景图节点),
-并提供一份"侦察-运输联合行动"的种子场景,供界面渲染与 mock 规划器使用。
-真实系统中,这些对象应由集群上报与场景图融合动态生成。
+平台(含能力档案)从 data/platforms.json 加载;地图渲染用的区域 / 场景节点
+从 data/scene.json 派生 —— 保证界面与规划器共享同一份场景描述。
+分组不再硬编码,而是由 planner 依据能力匹配动态生成。
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
+from pathlib import Path
+import json
+
+from .scene import load_scene, Scene
 
 Kind = Literal["air", "ground"]
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 
 @dataclass
 class Platform:
-    pid: str                 # UAV-01 / UGV-03
-    kind: Kind               # air / ground
-    spec: str                # 平台描述
-    battery: int             # 电量 %
-    status: str              # 当前行为
-    x: float                 # 地图归一化坐标 (0..1)
+    pid: str
+    kind: Kind
+    spec: str
+    battery: int
+    status: str
+    x: float                       # 归一化坐标(供地图)
     y: float
+    caps: list[str] = field(default_factory=list)      # 能力档案
+    payload_kg: float = 0.0
+    endurance_min: int = 0
+    sensors: list[str] = field(default_factory=list)
 
     @property
     def busy(self) -> bool:
@@ -28,10 +37,20 @@ class Platform:
 
 @dataclass
 class Group:
-    gid: str                 # A / B / C
-    name: str                # 显示名
-    task: str                # 组任务(顶层下达)
+    gid: str
+    name: str
+    task: str
     members: list[Platform] = field(default_factory=list)
+
+
+# ---- 地图渲染用的轻量类型(从 JSON 场景派生) ----
+@dataclass
+class Zone:
+    zid: str
+    label: str
+    tag: str
+    color: str
+    poly: list[tuple[float, float]]
 
 
 @dataclass
@@ -40,59 +59,58 @@ class SceneNode:
     label: str
     x: float
     y: float
-    kind: str = "object"     # object / target / route / origin
+    kind: str = "object"
     conf: float | None = None
 
 
-@dataclass
-class Zone:
-    zid: str
-    label: str
-    tag: str
-    color: str
-    # 归一化多边形顶点
-    poly: list[tuple[float, float]]
-
-
 # --------------------------------------------------------------------------
-# 种子场景:侦察-运输联合行动
+# 加载器
 # --------------------------------------------------------------------------
-def seed_groups() -> list[Group]:
-    return [
-        Group("A", "A 组 · 空中侦察", "侦察 A 区并定位可疑目标", [
-            Platform("UAV-01", "air", "四旋翼 · 光电吊舱", 86, "扇区扫描", 0.28, 0.20),
-            Platform("UAV-02", "air", "四旋翼 · SAR",     78, "扇区扫描", 0.36, 0.27),
-        ]),
-        Group("B", "B 组 · 物资运输", "保障 B 点物资运输(空地协同)", [
-            Platform("UGV-03", "ground", "六轮 · 载荷 40kg",   64, "路径行进", 0.56, 0.74),
-            Platform("UAV-04", "air",    "四旋翼 · 中继护航",  31, "伴随护航", 0.56, 0.67),
-        ]),
-        Group("C", "C 组 · 待命预备", "中心待命,响应动态增援", [
-            Platform("UGV-05", "ground", "履带 · 侦察搬运", 92, "待命", 0.16, 0.89),
-        ]),
-    ]
+def load_platforms(path: str | Path = None) -> list[Platform]:
+    path = Path(path) if path else DATA_DIR / "platforms.json"
+    with open(path, encoding="utf-8") as f:
+        raw = json.load(f)
+    out = []
+    for p in raw["platforms"]:
+        out.append(Platform(
+            pid=p["id"], kind=p["kind"], spec=p["spec"],
+            battery=p["battery"], status=p.get("status", "待命"),
+            x=p["pos"][0], y=p["pos"][1],
+            caps=p.get("capabilities", []), payload_kg=p.get("payload_kg", 0),
+            endurance_min=p.get("endurance_min", 0), sensors=p.get("sensors", []),
+        ))
+    return out
 
 
-def seed_zones() -> list[Zone]:
-    from ..config import C
-    return [
-        Zone("A", "A 区 · 侦察", "SECTOR SCAN · 3 fans", C.AIR,
-             [(0.13, 0.16), (0.38, 0.12), (0.42, 0.41), (0.18, 0.48)]),
-        Zone("B", "B 点 · 补给", "DELIVERY DZ", C.GROUND,
-             [(0.71, 0.64), (0.88, 0.64), (0.88, 0.84), (0.71, 0.84)]),
-        Zone("NF", "⃠ 禁飞区", "NO-FLY", C.ALERT,
-             [(0.50, 0.32), (0.62, 0.29), (0.66, 0.50), (0.52, 0.54)]),
-    ]
+# ---- 地图数据(从场景派生) ----
+_ZONE_STYLE = {
+    "survey":   ("SECTOR SCAN", "#4FC3E8"),
+    "delivery": ("DELIVERY DZ", "#E0A23C"),
+    "no_fly":   ("NO-FLY",      "#E5484D"),
+}
+_OBJ_KIND = {"building": "object", "target": "target", "route": "route",
+             "origin": "origin", "terrain": "object"}
 
 
-def seed_scene_graph() -> tuple[list[SceneNode], list[tuple[str, str]]]:
-    nodes = [
-        SceneNode("n1", "建筑群_01", 0.46, 0.25, "object"),
-        SceneNode("n2", "可疑目标?", 0.58, 0.41, "target", conf=0.71),
-        SceneNode("n3", "通路_主干道", 0.80, 0.43, "route"),
-        SceneNode("n4", "出发点", 0.20, 0.80, "origin"),
-        SceneNode("n5", "开阔地", 0.36, 0.54, "object"),
-    ]
-    edges = [("n1", "n2"), ("n1", "n5"), ("n2", "n5"),
-             ("n2", "n3"), ("n5", "n4"), ("n4", "n3"), ("n3", "n2")]
+def seed_zones(scene: Scene = None) -> list[Zone]:
+    scene = scene or load_scene()
+    out = []
+    for z in scene.zones.values():
+        tag, color = _ZONE_STYLE.get(z.type, ("", "#7C86FF"))
+        label = z.name if z.type != "no_fly" else "⃠ " + z.name
+        out.append(Zone(z.zid, label, tag, color, z.poly_norm))
+    return out
+
+
+def seed_scene_graph(scene: Scene = None):
+    """返回 (显著语义节点, 叠加边),供 2D 态势图的"场景图"视图。"""
+    scene = scene or load_scene()
+    salient = ("building", "target", "route", "origin", "terrain")
+    nodes = []
+    for o in scene.objects.values():
+        if o.type in salient:
+            nodes.append(SceneNode(o.oid, o.name, o.x, o.y,
+                                   _OBJ_KIND.get(o.type, "object"),
+                                   o.attrs.get("confidence")))
+    edges = [(a, b) for a, b in scene.overlay_edges]
     return nodes, edges

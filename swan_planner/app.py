@@ -1,18 +1,19 @@
 """主窗口装配与信号接线。
 
-布局:头部栏 + 三栏主体(编组 / 地图 / 任务+推理链)+ 底部时间线。
-交互:
-  · 左栏选组   → 联动推理链作用域,并按该组重算分层规划
-  · 任务下达   → 后台线程调用 mock 规划器,完成后渲染推理链
+执行逻辑(已优化):
+  · 全局规划(L1)在后台线程执行,只在初始化与"生成方案"时触发;
+  · 分组选择只做 L2/L3 的惰性组装(纯查询,毫秒级),不重算 L1。
+数据流:JSON 场景 + 平台能力 → PlannerEngine 能力匹配分配 → 分组树 + 推理链。
 """
 from __future__ import annotations
-from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout)
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout
 from PySide6.QtCore import Qt, QThread, Signal, QObject
 
-from .config import C, APP_NAME, VERSION
+from .config import APP_NAME, VERSION
 from .theme import stylesheet
-from .models.data import seed_groups
-from .models.mock_llm import MockPlanner, PlanResult
+from .models.scene import load_scene
+from .models.data import load_platforms
+from .models.planner import PlannerEngine, GlobalPlan
 from .widgets.header_bar import HeaderBar
 from .widgets.group_tree import GroupTree
 from .widgets.situation_map import SituationMap
@@ -20,23 +21,20 @@ from .widgets.task_panel import TaskPanel
 from .widgets.reasoning_chain import ReasoningChain
 from .widgets.timeline import Timeline
 
+SCOPE = {"A": "全局 · A 组", "B": "全局 · B 组", "C": "全局 · C 组"}
 
-class PlanWorker(QObject):
-    """在后台线程运行 mock 规划器,避免阻塞界面。"""
-    done = Signal(object)   # PlanResult
 
-    def __init__(self, instruction: str, group_id: str):
+class GlobalPlanWorker(QObject):
+    """后台执行 L1 全局规划(含能力匹配分配)。"""
+    done = Signal(object)   # GlobalPlan
+
+    def __init__(self, engine: PlannerEngine, instruction: str):
         super().__init__()
+        self._engine = engine
         self._instruction = instruction
-        self._group_id = group_id
-        self._planner = MockPlanner()
 
     def run(self):
-        result = self._planner.plan(self._instruction, self._group_id)
-        self.done.emit(result)
-
-
-SCOPE = {"A": "全局 · A 组", "B": "全局 · B 组", "C": "全局 · C 组"}
+        self.done.emit(self._engine.plan_global(self._instruction))
 
 
 class MainWindow(QMainWindow):
@@ -46,44 +44,43 @@ class MainWindow(QMainWindow):
         self.resize(1440, 900)
         self.setStyleSheet(stylesheet())
 
-        self._groups = seed_groups()
+        # ---- 后端:场景 + 平台能力 + 规划引擎 ----
+        self.scene = load_scene()
+        self.platforms = load_platforms()
+        self.engine = PlannerEngine(self.scene, self.platforms)
+        self.global_plan: GlobalPlan | None = None
         self._current_group = "A"
         self._thread: QThread | None = None
 
+        # ---- 布局 ----
         central = QWidget()
-        root = QVBoxLayout(central)
-        root.setContentsMargins(0, 0, 0, 0); root.setSpacing(0)
+        root = QVBoxLayout(central); root.setContentsMargins(0, 0, 0, 0); root.setSpacing(0)
 
-        # 头部
         self.header = HeaderBar()
         root.addWidget(self.header)
 
-        # 主体三栏
         grid = QWidget()
         g = QHBoxLayout(grid); g.setContentsMargins(10, 10, 10, 10); g.setSpacing(10)
 
-        self.tree = GroupTree(self._groups)
+        self.tree = GroupTree()
         self.tree.setFixedWidth(272)
         g.addWidget(self.tree)
 
-        self.map = SituationMap(self._groups)
+        self.map = SituationMap([])          # 平台标记随分配结果更新
         g.addWidget(self.map, 1)
 
         right = QWidget(); right.setFixedWidth(380)
         rv = QVBoxLayout(right); rv.setContentsMargins(0, 0, 0, 0); rv.setSpacing(10)
         self.task = TaskPanel()
         self.chain = ReasoningChain()
-        rv.addWidget(self.task)
-        rv.addWidget(self.chain, 1)
+        rv.addWidget(self.task); rv.addWidget(self.chain, 1)
         g.addWidget(right)
-
         root.addWidget(grid, 1)
 
-        # 底部时间线
-        timeline_wrap = QWidget()
-        tw = QVBoxLayout(timeline_wrap); tw.setContentsMargins(10, 0, 10, 10)
+        tl_wrap = QWidget()
+        tw = QVBoxLayout(tl_wrap); tw.setContentsMargins(10, 0, 10, 10)
         tw.addWidget(Timeline())
-        root.addWidget(timeline_wrap)
+        root.addWidget(tl_wrap)
 
         self.setCentralWidget(central)
 
@@ -91,42 +88,41 @@ class MainWindow(QMainWindow):
         self.tree.groupSelected.connect(self._on_group_selected)
         self.task.planRequested.connect(self._on_plan_requested)
 
-        # 初次渲染
-        self._run_plan(self.task.cmd.toPlainText().strip(), self._current_group)
+        # 初次全局规划
+        self._run_global(self.task.cmd.toPlainText().strip())
 
-    # ---- 分组选择 ----
+    # ---- 分组选择:仅惰性组装 L2/L3 ----
     def _on_group_selected(self, gid: str):
         self._current_group = gid
-        self.map.map.set_view(self._current_view())
-        self._run_plan(self.task.cmd.toPlainText().strip(), gid)
+        if self.global_plan is None:
+            return
+        result = self.engine.assemble(self.global_plan, gid)
+        self.chain.render_plan(result, SCOPE.get(gid, "全局"))
 
-    def _current_view(self) -> str:
-        # 保持地图当前视图不变(默认态势)
-        for b in self.map._bg.buttons():
-            if b.isChecked():
-                return b.property("view")
-        return "sit"
-
-    # ---- 任务下达 ----
+    # ---- 任务下达:重新全局规划 ----
     def _on_plan_requested(self, text: str):
-        self._run_plan(text, self._current_group)
+        self._run_global(text)
 
-    def _run_plan(self, instruction: str, group_id: str):
+    def _run_global(self, instruction: str):
         if self._thread and self._thread.isRunning():
             return
         self.task.set_generating(True)
-
         self._thread = QThread()
-        self._worker = PlanWorker(instruction, group_id)
+        self._worker = GlobalPlanWorker(self.engine, instruction)
         self._worker.moveToThread(self._thread)
         self._thread.started.connect(self._worker.run)
-        self._worker.done.connect(self._on_plan_done)
+        self._worker.done.connect(self._on_global_done)
         self._worker.done.connect(self._thread.quit)
         self._thread.finished.connect(self._cleanup_thread)
         self._thread.start()
 
-    def _on_plan_done(self, result: PlanResult):
-        self.chain.render_plan(result, SCOPE.get(self._current_group, "全局"))
+    def _on_global_done(self, gp: GlobalPlan):
+        self.global_plan = gp
+        # 用能力匹配的分配结果刷新分组树与地图
+        self.tree.set_groups(gp.as_groups())
+        self.map.set_platforms([m for grp in gp.groups for m in grp.members])
+        # 渲染当前组(set_groups 会触发 groupSelected → 已渲染);兜底再渲一次
+        self._on_group_selected(self.tree._selected or self._current_group)
         self.task.set_generating(False)
 
     def _cleanup_thread(self):
