@@ -1,0 +1,67 @@
+{
+  "platforms": [
+    {
+      "id": "UGV-01", "kind": "ground", "spec": "六轮 · 通用运输",
+      "battery": 88, "pos": [0.130, 0.810], "status": "待命",
+      "capabilities": ["transport", "ground_nav", "obstacle_detect"],
+      "payload_kg": 40, "endurance_min": 120, "max_speed_ms": 6, "sensors": ["EO", "LiDAR"]
+    },
+    {
+      "id": "UGV-02", "kind": "ground", "spec": "履带 · 破障开门",
+      "battery": 91, "pos": [0.130, 0.810], "status": "待命",
+      "capabilities": ["breach", "clear_obstacle", "ground_nav", "manipulator"],
+      "payload_kg": 20, "endurance_min": 90, "max_speed_ms": 4, "sensors": ["EO"]
+    },
+    {
+      "id": "UGV-03", "kind": "ground", "spec": "四轮 · 外围侦察",
+      "battery": 84, "pos": [0.130, 0.810], "status": "待命",
+      "capabilities": ["ground_recon", "ground_nav", "eo_imaging", "obstacle_detect"],
+      "payload_kg": 10, "endurance_min": 140, "max_speed_ms": 8, "sensors": ["EO", "LiDAR"]
+    },
+    {
+      "id": "UGV-04", "kind": "ground", "spec": "四轮 · 通信中继车",
+      "battery": 95, "pos": [0.130, 0.810], "status": "待命",
+      "capabilities": ["comm_relay", "ground_nav", "mesh_node"],
+      "payload_kg": 15, "endurance_min": 180, "max_speed_ms": 7, "sensors": ["EO"]
+    },
+    {
+      "id": "UGV-05", "kind": "ground", "spec": "小型履带 · 室内侦察",
+      "battery": 76, "pos": [0.130, 0.810], "status": "待命",
+      "capabilities": ["indoor_nav", "ground_recon", "eo_imaging", "stair_climb"],
+      "payload_kg": 5, "endurance_min": 70, "max_speed_ms": 2, "sensors": ["EO", "LiDAR"],
+      "width_m": 0.5
+    },
+    {
+      "id": "UGV-06", "kind": "ground", "spec": "六轮 · 医疗后送",
+      "battery": 90, "pos": [0.130, 0.810], "status": "待命",
+      "capabilities": ["transport", "casevac", "ground_nav"],
+      "payload_kg": 120, "endurance_min": 110, "max_speed_ms": 5, "sensors": ["EO"]
+    },
+
+    {
+      "id": "UAV-01", "kind": "air", "spec": "四旋翼 · EO 广域侦察",
+      "battery": 87, "pos": [0.130, 0.810], "status": "待命",
+      "capabilities": ["aerial_survey", "eo_imaging", "target_track"],
+      "payload_kg": 0, "endurance_min": 38, "max_speed_ms": 18, "sensors": ["EO"]
+    },
+    {
+      "id": "UAV-02", "kind": "air", "spec": "四旋翼 · 热成像/立面扫描",
+      "battery": 82, "pos": [0.130, 0.810], "status": "待命",
+      "capabilities": ["aerial_survey", "thermal_imaging", "facade_scan", "target_confirm"],
+      "payload_kg": 0, "endurance_min": 34, "max_speed_ms": 15, "sensors": ["IR", "EO"]
+    },
+    {
+      "id": "UAV-03", "kind": "air", "spec": "四旋翼 · 空中中继",
+      "battery": 93, "pos": [0.130, 0.810], "status": "待命",
+      "capabilities": ["comm_relay", "mesh_node", "loiter"],
+      "payload_kg": 2, "endurance_min": 45, "max_speed_ms": 14, "sensors": ["EO"]
+    },
+    {
+      "id": "UAV-04", "kind": "air", "spec": "微型穿越机 · 室内",
+      "battery": 71, "pos": [0.130, 0.810], "status": "待命",
+      "capabilities": ["indoor_flight", "eo_imaging", "target_confirm"],
+      "payload_kg": 0, "endurance_min": 9, "max_speed_ms": 10, "sensors": ["EO"],
+      "width_m": 0.25
+    }
+  ]
+}
