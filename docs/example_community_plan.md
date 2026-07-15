@@ -1,5 +1,14 @@
 # 规划结果示例 · 社区单建筑封控清查
 
+![社区场景态势图](community_map.png)
+
+> 地图由 [`tools/render_scene_map.py`](../tools/render_scene_map.py) 从
+> `community_scene.json` 直接渲染,抵近路径为 `scene.py` 的 Dijkstra 实算结果 ——
+> 地图与规划结果同源,不会各画各的。重新生成:
+> ```bash
+> python tools/render_scene_map.py swan_planner/data/scenarios/community_scene.json docs/community_map.png
+> ```
+
 **输入**
 - 场景:[`community_scene.json`](../swan_planner/data/scenarios/community_scene.json) —— 社区 420×300m,主楼 6 层 / 18m,北侧高压线禁飞带(天花板 60m),废弃车辆阻断主入口正面通路,楼体背面通信盲区。
 - 装备:[`community_platforms.json`](../swan_planner/data/scenarios/community_platforms.json) —— 6×UGV + 4×UAV。
