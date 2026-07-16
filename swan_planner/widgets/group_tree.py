@@ -47,6 +47,43 @@ class UnitRow(QFrame):
         lay.addLayout(stat)
 
 
+class SquadRow(QFrame):
+    """分队聚合行:角色 + 台数 + 机型构成 + 缺编标记。"""
+    def __init__(self, sq):
+        super().__init__()
+        kinds = {}
+        for m in sq.members:
+            kinds[m.pid[:5]] = kinds.get(m.pid[:5], 0) + 1
+        air = sum(1 for m in sq.members if m.kind == "air")
+        accent = C.AIR if air > len(sq.members) / 2 else C.GROUND
+        if not sq.members:
+            accent = C.ALERT
+        self.setStyleSheet(
+            "QFrame{background:#0F1A28;border:1px solid %s;border-left:3px solid %s;"
+            "border-radius:6px;}" % (C.LINE_SOFT, accent))
+        lay = QHBoxLayout(self); lay.setContentsMargins(8, 5, 8, 5); lay.setSpacing(8)
+
+        name = QLabel(sq.label)
+        name.setStyleSheet("font-size:11px;font-weight:600;")
+        lay.addWidget(name)
+
+        cnt = QLabel("×%d" % len(sq.members))
+        cnt.setStyleSheet("font-family:monospace;font-size:11px;color:%s;" % accent)
+        lay.addWidget(cnt)
+        lay.addStretch(1)
+
+        comp = QLabel(" ".join("%s×%d" % (k, v) for k, v in sorted(kinds.items())))
+        comp.setStyleSheet("font-family:monospace;font-size:9px;color:%s;" % C.DIM)
+        lay.addWidget(comp)
+
+        if sq.shortfall:
+            sf = QLabel("缺%d" % sq.shortfall)
+            sf.setStyleSheet(
+                "color:%s;border:1px solid %s;border-radius:4px;"
+                "padding:0 4px;font-size:9px;" % (C.ALERT, C.ALERT))
+            lay.addWidget(sf)
+
+
 class GroupCard(QFrame):
     clicked = Signal(str)
 
@@ -78,11 +115,21 @@ class GroupCard(QFrame):
         h.addWidget(cnt)
         lay.addWidget(head)
 
-        # 成员
+        # 成员:100 台规模下按"分队"聚合展示,不逐台罗列
         body = QWidget()
-        b = QVBoxLayout(body); b.setContentsMargins(9, 0, 9, 9); b.setSpacing(6)
-        for m in g.members:
-            b.addWidget(UnitRow(m))
+        b = QVBoxLayout(body); b.setContentsMargins(9, 0, 9, 9); b.setSpacing(5)
+        squads = getattr(g, "squads", None)
+        if squads:
+            for sq in squads:
+                if sq.members or sq.shortfall:
+                    b.addWidget(SquadRow(sq))
+        else:
+            for m in g.members[:6]:
+                b.addWidget(UnitRow(m))
+            if len(g.members) > 6:
+                more = QLabel("… 另 %d 台" % (len(g.members) - 6))
+                more.setStyleSheet("color:%s;font-size:10px;padding-left:4px;" % C.DIM)
+                b.addWidget(more)
         lay.addWidget(body)
 
     def _apply_style(self):

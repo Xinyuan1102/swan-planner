@@ -120,27 +120,43 @@ class Renderer:
             oa, ob = self.sc.objects[a], self.sc.objects[b]
             p.drawLine(self.px(oa.x, oa.y), self.px(ob.x, ob.y))
 
-    # ---- 抵近路径(实算,含绕障) ----
+    # ---- 抵近路径(实算,含绕障 / 受阻标记) ----
     def _approach(self, p):
-        route, geo, detour = self.sc.shortest_ground_path("stage", "hold")
-        if not route:
-            return
-        path = QPainterPath(self.px(*self._xy(route[0])))
-        for nid in route[1:]:
-            path.lineTo(self.px(*self._xy(nid)))
-        # 外发光
-        glow = QColor(C.GROUND); glow.setAlphaF(0.22)
-        p.setPen(QPen(glow, 9, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-        p.drawPath(path)
-        p.setPen(QPen(QColor(C.GROUND), 2.6, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-        p.drawPath(path)
+        """为每栋建筑渲染由 Dijkstra 实算的抵近路径。"""
+        targets = []
+        for z in self.sc.zones_of("structure"):
+            for eid in z.attrs.get("entries", []):
+                o = self.sc.objects.get(eid)
+                if o is not None and o.attrs.get("breach_req"):
+                    targets.append((z.name, eid))
+                    break
+        if not targets:                      # 回退:小场景的固定终点
+            targets = [("抵近", "hold")] if "hold" in self.sc.objects else []
 
-        # 路径标注
-        mid = self.px(*self._xy(route[len(route) // 2]))
-        p.setFont(QFont("IBM Plex Mono", 9, QFont.Bold))
-        p.setPen(QColor(C.GROUND))
-        txt = f"抵近路径 {geo:.0f}m" + ("  · 绕障" if detour else "")
-        p.drawText(QRectF(mid.x() - 130, mid.y() + 12, 260, 16), Qt.AlignHCenter, txt)
+        for name, dst in targets:
+            route, geo, detour = self.sc.shortest_ground_path("stage", dst)
+            if not route:
+                continue
+            blockers = self.sc.path_blockers(route)
+            path = QPainterPath(self.px(*self._xy(route[0])))
+            for nid in route[1:]:
+                path.lineTo(self.px(*self._xy(nid)))
+            col = C.ALERT if blockers else C.GROUND
+            glow = QColor(col); glow.setAlphaF(0.20)
+            p.setPen(QPen(glow, 9, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+            p.drawPath(path)
+            p.setPen(QPen(QColor(col), 2.4, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+            p.drawPath(path)
+
+            mid = self.px(*self._xy(route[len(route) // 2]))
+            tag = "%.0fm" % geo
+            if blockers:
+                tag += " · 受阻需清障"
+            elif detour:
+                tag += " · 绕障"
+            p.setFont(QFont("IBM Plex Mono", 8, QFont.Bold))
+            p.setPen(QColor(col))
+            p.drawText(QRectF(mid.x() - 110, mid.y() + 10, 220, 14), Qt.AlignHCenter, tag)
 
     def _xy(self, nid):
         o = self.sc.objects[nid]
@@ -234,9 +250,10 @@ class Renderer:
     # ---- 图例 ----
     def _legend(self, p):
         items = [
-            (C.GROUND, "抵近路径(实算 · 绕障)"),
+            (C.GROUND, "抵近路径(实算 · 可绕障)"),
+            (C.ALERT,  "受阻通路(无旁路 · 须清障)"),
             (C.OK,     "封控点 CORDON ×4"),
-            (C.ALERT,  "目标 / 障碍 / 需破门入口"),
+            (C.WARN,   "目标 / 障碍 / 盲区"),
             (C.WARN,   "通信盲区 / 免破门入口"),
             (C.SYS,    "集结展开区"),
             ("#33465e", "地面通行网(ground_edges)"),
@@ -257,12 +274,13 @@ class Renderer:
     # ---- 标题 ----
     def _title(self, p):
         p.setPen(QColor(C.TEXT)); p.setFont(QFont("Arial", 15, QFont.Bold))
-        p.drawText(QRectF(PAD, 12, 700, 20), Qt.AlignLeft,
-                   "社区单建筑封控清查 · 态势图")
+        p.drawText(QRectF(PAD, 12, 900, 20), Qt.AlignLeft,
+                   self.sc.raw["ao"]["name"] + " · 态势图")
         p.setPen(QColor(C.DIM)); p.setFont(QFont("IBM Plex Mono", 9))
         p.drawText(QRectF(PAD, 30, 700, 14), Qt.AlignLeft,
-                   f"AO {self.sc.ao_w:.0f}×{self.sc.ao_h:.0f}m  ·  6×UGV + 4×UAV  ·  "
-                   f"rendered from community_scene.json")
+                   f"AO {self.sc.ao_w:.0f}×{self.sc.ao_h:.0f}m  ·  "
+                   f"{len(self.sc.zones_of('structure'))} 栋建筑  ·  "
+                   f"{len(self.sc.ground_edges)} 条通行边  ·  rendered from scene.json")
 
 
 def main():

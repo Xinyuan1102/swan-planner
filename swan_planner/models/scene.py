@@ -188,6 +188,18 @@ class Scene:
         detour = naive != path
         return path, geo, detour
 
+    def path_blockers(self, route):
+        """返回阻挡给定路径的障碍列表(无旁路可绕时,规划器需派破障平台清除)。"""
+        hits = []
+        for o in self.objects_of("obstacle"):
+            oc = self.obj_m(o.oid); orad = o.attrs.get("radius_m", 30)
+            for i in range(len(route) - 1):
+                pa, pb = self.obj_m(route[i]), self.obj_m(route[i + 1])
+                if _seg_point_dist(oc, pa, pb) < orad:
+                    hits.append(o)
+                    break
+        return hits
+
     # ---- LLM 上下文序列化 ----
     def to_prompt_context(self) -> str:
         lines = ["[SCENE]"]

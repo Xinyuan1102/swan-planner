@@ -137,30 +137,66 @@ class MapView(QGraphicsView):
                 grp.addToGroup(cf)
         return grp
 
-    # ---- 平台标记 ----
+    # ---- 平台标记(聚簇:100 台规模下避免标记重叠) ----
     def _draw_platforms(self, platforms):
+        CELL = 34.0                       # 聚簇网格(场景坐标)
+        buckets = {}
         for p in platforms:
             x, y = p.x * W, p.y * H
-            col = C.AIR if p.kind == "air" else C.GROUND
-            if p.status == "待命":
-                col = "#3A4C63"
-            if p.kind == "air":
-                tri = QPolygonF([QPointF(x, y - 9), QPointF(x + 8, y + 7), QPointF(x - 8, y + 7)])
-                item = QGraphicsPolygonItem(tri)
+            key = (int(x // CELL), int(y // CELL))
+            buckets.setdefault(key, []).append((p, x, y))
+
+        for (_, _), items in buckets.items():
+            n = len(items)
+            cx = sum(i[1] for i in items) / n
+            cy = sum(i[2] for i in items) / n
+            n_air = sum(1 for i in items if i[0].kind == "air")
+            col = C.AIR if n_air > n / 2 else C.GROUND
+
+            if n == 1:
+                p0, x, y = items[0]
+                col = C.AIR if p0.kind == "air" else C.GROUND
+                if p0.kind == "air":
+                    item = QGraphicsPolygonItem(QPolygonF([
+                        QPointF(x, y - 9), QPointF(x + 8, y + 7), QPointF(x - 8, y + 7)]))
+                else:
+                    item = QGraphicsPolygonItem(QPolygonF([
+                        QPointF(x - 7, y - 7), QPointF(x + 7, y - 7),
+                        QPointF(x + 7, y + 7), QPointF(x - 7, y + 7)]))
+                item.setBrush(QBrush(QColor(col)))
+                item.setPen(_pen("#0A1019", 1.0))
+                self._scene.addItem(item); self._plat_items.append(item)
+                lab = QGraphicsSimpleTextItem(p0.pid)
+                lab.setBrush(QColor(col).lighter(140))
+                lab.setFont(QFont("IBM Plex Mono", 8))
+                lab.setPos(x + 11, y - 7)
+                self._scene.addItem(lab); self._plat_items.append(lab)
             else:
-                item = QGraphicsPolygonItem(QPolygonF([
-                    QPointF(x - 7, y - 7), QPointF(x + 7, y - 7),
-                    QPointF(x + 7, y + 7), QPointF(x - 7, y + 7)]))
-            item.setBrush(QBrush(QColor(col)))
-            item.setPen(_pen("#0A1019", 1.0))
-            self._scene.addItem(item)
-            self._plat_items.append(item)
-            lab = QGraphicsSimpleTextItem(p.pid)
-            lab.setBrush(QColor(col).lighter(140))
-            lab.setFont(QFont("IBM Plex Mono", 8))
-            lab.setPos(x + 11, y - 7)
-            self._scene.addItem(lab)
-            self._plat_items.append(lab)
+                # 聚簇气泡:半径随数量增长,中心显示台数
+                r = 9 + min(11.0, n ** 0.5 * 2.6)
+                halo = QColor(col); halo.setAlphaF(0.22)
+                ring = QGraphicsEllipseItem(cx - r - 4, cy - r - 4, (r + 4) * 2, (r + 4) * 2)
+                ring.setBrush(QBrush(halo)); ring.setPen(Qt.NoPen)
+                self._scene.addItem(ring); self._plat_items.append(ring)
+
+                bub = QGraphicsEllipseItem(cx - r, cy - r, r * 2, r * 2)
+                bub.setBrush(QBrush(QColor(col)))
+                bub.setPen(_pen("#0A1019", 1.2))
+                self._scene.addItem(bub); self._plat_items.append(bub)
+
+                txt = QGraphicsSimpleTextItem(str(n))
+                txt.setBrush(QColor("#0A1019"))
+                txt.setFont(QFont("IBM Plex Mono", 9, QFont.Bold))
+                br = txt.boundingRect()
+                txt.setPos(cx - br.width() / 2, cy - br.height() / 2)
+                self._scene.addItem(txt); self._plat_items.append(txt)
+
+                if n_air and n_air != n:      # 混编时标注构成
+                    sub = QGraphicsSimpleTextItem("%d空/%d地" % (n_air, n - n_air))
+                    sub.setBrush(QColor(C.MUTED))
+                    sub.setFont(QFont("IBM Plex Mono", 7))
+                    sub.setPos(cx - 16, cy + r + 2)
+                    self._scene.addItem(sub); self._plat_items.append(sub)
 
     # ---- 视图切换 ----
     def set_view(self, view: str):

@@ -1,0 +1,797 @@
+{
+ "ao": {
+  "name": "社区片区(主干道 + 支路 + 3 栋建筑)",
+  "size_m": [
+   1200.0,
+   800.0
+  ]
+ },
+ "zones": [
+  {
+   "id": "z_bldA",
+   "name": "BLD-A · 办公楼",
+   "type": "structure",
+   "poly": [
+    [
+     0.2375,
+     0.1812
+    ],
+    [
+     0.3625,
+     0.1812
+    ],
+    [
+     0.3625,
+     0.2938
+    ],
+    [
+     0.2375,
+     0.2938
+    ]
+   ],
+   "height_m": 26,
+   "floors": 8,
+   "priority": "P1",
+   "entries": [
+    "z_bldA_e1",
+    "z_bldA_e2"
+   ],
+   "objective": "查明办公楼内人员,必要时突入清查"
+  },
+  {
+   "id": "z_bldB",
+   "name": "BLD-B · 居民楼",
+   "type": "structure",
+   "poly": [
+    [
+     0.4625,
+     0.7875
+    ],
+    [
+     0.6042,
+     0.7875
+    ],
+    [
+     0.6042,
+     0.8875
+    ],
+    [
+     0.4625,
+     0.8875
+    ]
+   ],
+   "height_m": 18,
+   "floors": 6,
+   "priority": "P1",
+   "entries": [
+    "z_bldB_e1",
+    "z_bldB_e2"
+   ],
+   "objective": "封控居民楼,逐层核查"
+  },
+  {
+   "id": "z_bldC",
+   "name": "BLD-C · 仓库",
+   "type": "structure",
+   "poly": [
+    [
+     0.7125,
+     0.1812
+    ],
+    [
+     0.8208,
+     0.1812
+    ],
+    [
+     0.8208,
+     0.2812
+    ],
+    [
+     0.7125,
+     0.2812
+    ]
+   ],
+   "height_m": 9,
+   "floors": 2,
+   "priority": "P2",
+   "entries": [
+    "z_bldC_e1",
+    "z_bldC_e2"
+   ],
+   "objective": "仓库外围侦察与内部查验"
+  },
+  {
+   "id": "z_cordon",
+   "name": "总封控圈",
+   "type": "cordon",
+   "poly": [
+    [
+     0.2083,
+     0.1375
+    ],
+    [
+     0.8583,
+     0.1375
+    ],
+    [
+     0.8583,
+     0.9125
+    ],
+    [
+     0.2083,
+     0.9125
+    ]
+   ],
+   "priority": "P1",
+   "objective": "封控三栋建筑及连接道路"
+  },
+  {
+   "id": "z_stage",
+   "name": "集结/展开区",
+   "type": "staging",
+   "poly": [
+    [
+     0.0208,
+     0.6813
+    ],
+    [
+     0.1292,
+     0.6813
+    ],
+    [
+     0.1292,
+     0.8688
+    ],
+    [
+     0.0208,
+     0.8688
+    ]
+   ],
+   "ground_access": true
+  },
+  {
+   "id": "z_plaza",
+   "name": "社区广场",
+   "type": "open",
+   "poly": [
+    [
+     0.2958,
+     0.7688
+    ],
+    [
+     0.4042,
+     0.7688
+    ],
+    [
+     0.4042,
+     0.8812
+    ],
+    [
+     0.2958,
+     0.8812
+    ]
+   ],
+   "ground_access": true
+  },
+  {
+   "id": "z_nofly",
+   "name": "高压线禁飞带",
+   "type": "no_fly",
+   "poly": [
+    [
+     0.0333,
+     0.05
+    ],
+    [
+     0.9667,
+     0.05
+    ],
+    [
+     0.9667,
+     0.1187
+    ],
+    [
+     0.0333,
+     0.1187
+    ]
+   ],
+   "ceiling_m": 60
+  }
+ ],
+ "objects": [
+  {
+   "id": "M0",
+   "name": "主干道 M0",
+   "type": "waypoint",
+   "pos": [
+    0.0667,
+    0.5375
+   ],
+   "road": "main"
+  },
+  {
+   "id": "M1",
+   "name": "主干道 M1",
+   "type": "waypoint",
+   "pos": [
+    0.1833,
+    0.5375
+   ],
+   "road": "main"
+  },
+  {
+   "id": "M2",
+   "name": "主干道 M2",
+   "type": "waypoint",
+   "pos": [
+    0.3,
+    0.5375
+   ],
+   "road": "main"
+  },
+  {
+   "id": "M3",
+   "name": "主干道 M3",
+   "type": "waypoint",
+   "pos": [
+    0.4167,
+    0.5375
+   ],
+   "road": "main"
+  },
+  {
+   "id": "M4",
+   "name": "主干道 M4",
+   "type": "waypoint",
+   "pos": [
+    0.5333,
+    0.5375
+   ],
+   "road": "main"
+  },
+  {
+   "id": "M5",
+   "name": "主干道 M5",
+   "type": "waypoint",
+   "pos": [
+    0.65,
+    0.5375
+   ],
+   "road": "main"
+  },
+  {
+   "id": "M6",
+   "name": "主干道 M6",
+   "type": "waypoint",
+   "pos": [
+    0.7667,
+    0.5375
+   ],
+   "road": "main"
+  },
+  {
+   "id": "M7",
+   "name": "主干道 M7",
+   "type": "waypoint",
+   "pos": [
+    0.8833,
+    0.5375
+   ],
+   "road": "main"
+  },
+  {
+   "id": "M8",
+   "name": "主干道 M8",
+   "type": "waypoint",
+   "pos": [
+    0.9583,
+    0.5375
+   ],
+   "road": "main"
+  },
+  {
+   "id": "A1",
+   "name": "支路 A1",
+   "type": "waypoint",
+   "pos": [
+    0.3,
+    0.4125
+   ],
+   "road": "branch"
+  },
+  {
+   "id": "A2",
+   "name": "支路 A2",
+   "type": "waypoint",
+   "pos": [
+    0.3,
+    0.3
+   ],
+   "road": "branch"
+  },
+  {
+   "id": "B1",
+   "name": "支路 B1",
+   "type": "waypoint",
+   "pos": [
+    0.5333,
+    0.6625
+   ],
+   "road": "branch"
+  },
+  {
+   "id": "B2",
+   "name": "支路 B2",
+   "type": "waypoint",
+   "pos": [
+    0.5333,
+    0.775
+   ],
+   "road": "branch"
+  },
+  {
+   "id": "C1",
+   "name": "支路 C1",
+   "type": "waypoint",
+   "pos": [
+    0.7667,
+    0.4125
+   ],
+   "road": "branch"
+  },
+  {
+   "id": "C2",
+   "name": "支路 C2",
+   "type": "waypoint",
+   "pos": [
+    0.7667,
+    0.2938
+   ],
+   "road": "branch"
+  },
+  {
+   "id": "D1",
+   "name": "支路 D1",
+   "type": "waypoint",
+   "pos": [
+    0.4167,
+    0.7
+   ],
+   "road": "branch"
+  },
+  {
+   "id": "D2",
+   "name": "支路 D2",
+   "type": "waypoint",
+   "pos": [
+    0.3583,
+    0.8
+   ],
+   "road": "branch"
+  },
+  {
+   "id": "E1",
+   "name": "支路 E1",
+   "type": "waypoint",
+   "pos": [
+    0.65,
+    0.4
+   ],
+   "road": "branch"
+  },
+  {
+   "id": "E2",
+   "name": "支路 E2",
+   "type": "waypoint",
+   "pos": [
+    0.5833,
+    0.3125
+   ],
+   "road": "branch"
+  },
+  {
+   "id": "z_bldA_e1",
+   "name": "A 楼主入口",
+   "type": "entry",
+   "pos": [
+    0.3,
+    0.2938
+   ],
+   "state": "closed",
+   "breach_req": true
+  },
+  {
+   "id": "z_bldA_e2",
+   "name": "A 楼后门",
+   "type": "entry",
+   "pos": [
+    0.3,
+    0.1812
+   ],
+   "state": "closed",
+   "breach_req": false
+  },
+  {
+   "id": "z_bldB_e1",
+   "name": "B 楼主入口",
+   "type": "entry",
+   "pos": [
+    0.5333,
+    0.7875
+   ],
+   "state": "closed",
+   "breach_req": true
+  },
+  {
+   "id": "z_bldB_e2",
+   "name": "B 楼后门",
+   "type": "entry",
+   "pos": [
+    0.5333,
+    0.8875
+   ],
+   "state": "closed",
+   "breach_req": false
+  },
+  {
+   "id": "z_bldC_e1",
+   "name": "C 库卷帘门",
+   "type": "entry",
+   "pos": [
+    0.7667,
+    0.2812
+   ],
+   "state": "closed",
+   "breach_req": true
+  },
+  {
+   "id": "z_bldC_e2",
+   "name": "C 库侧门",
+   "type": "entry",
+   "pos": [
+    0.7667,
+    0.1812
+   ],
+   "state": "closed",
+   "breach_req": false
+  },
+  {
+   "id": "stage",
+   "name": "集结点",
+   "type": "origin",
+   "pos": [
+    0.075,
+    0.775
+   ]
+  },
+  {
+   "id": "K_W",
+   "name": "封控点 W",
+   "type": "waypoint",
+   "pos": [
+    0.2167,
+    0.5375
+   ],
+   "road": "cordon"
+  },
+  {
+   "id": "K_E",
+   "name": "封控点 E",
+   "type": "waypoint",
+   "pos": [
+    0.85,
+    0.5375
+   ],
+   "road": "cordon"
+  },
+  {
+   "id": "K_NW",
+   "name": "封控点 NW",
+   "type": "waypoint",
+   "pos": [
+    0.2167,
+    0.15
+   ],
+   "road": "cordon"
+  },
+  {
+   "id": "K_NE",
+   "name": "封控点 NE",
+   "type": "waypoint",
+   "pos": [
+    0.85,
+    0.15
+   ],
+   "road": "cordon"
+  },
+  {
+   "id": "K_SW",
+   "name": "封控点 SW",
+   "type": "waypoint",
+   "pos": [
+    0.2167,
+    0.9
+   ],
+   "road": "cordon"
+  },
+  {
+   "id": "K_SE",
+   "name": "封控点 SE",
+   "type": "waypoint",
+   "pos": [
+    0.85,
+    0.9
+   ],
+   "road": "cordon"
+  },
+  {
+   "id": "tgt_A3",
+   "name": "疑似人员_A楼3F",
+   "type": "target",
+   "pos": [
+    0.2833,
+    0.225
+   ],
+   "floor": 3,
+   "confidence": 0.62
+  },
+  {
+   "id": "tgt_B5",
+   "name": "疑似人员_B楼5F",
+   "type": "target",
+   "pos": [
+    0.55,
+    0.825
+   ],
+   "floor": 5,
+   "confidence": 0.55
+  },
+  {
+   "id": "obs_main",
+   "name": "路障_主干道",
+   "type": "obstacle",
+   "pos": [
+    0.475,
+    0.5375
+   ],
+   "radius_m": 22
+  },
+  {
+   "id": "obs_A",
+   "name": "废弃车辆_A支路",
+   "type": "obstacle",
+   "pos": [
+    0.3,
+    0.3625
+   ],
+   "radius_m": 14
+  },
+  {
+   "id": "blind_A",
+   "name": "A楼背面盲区",
+   "type": "terrain",
+   "pos": [
+    0.3,
+    0.1625
+   ],
+   "comm_blind": true
+  },
+  {
+   "id": "blind_C",
+   "name": "仓库区盲区",
+   "type": "terrain",
+   "pos": [
+    0.7667,
+    0.1625
+   ],
+   "comm_blind": true
+  },
+  {
+   "id": "N1",
+   "name": "绕行 N1",
+   "type": "waypoint",
+   "pos": [
+    0.4333,
+    0.45
+   ],
+   "road": "bypass"
+  },
+  {
+   "id": "N2",
+   "name": "绕行 N2",
+   "type": "waypoint",
+   "pos": [
+    0.5167,
+    0.45
+   ],
+   "road": "bypass"
+  }
+ ],
+ "ground_edges": [
+  [
+   "M0",
+   "M1"
+  ],
+  [
+   "M1",
+   "M2"
+  ],
+  [
+   "M2",
+   "M3"
+  ],
+  [
+   "M3",
+   "M4"
+  ],
+  [
+   "M4",
+   "M5"
+  ],
+  [
+   "M5",
+   "M6"
+  ],
+  [
+   "M6",
+   "M7"
+  ],
+  [
+   "M7",
+   "M8"
+  ],
+  [
+   "M2",
+   "A1"
+  ],
+  [
+   "A1",
+   "A2"
+  ],
+  [
+   "M4",
+   "B1"
+  ],
+  [
+   "B1",
+   "B2"
+  ],
+  [
+   "M6",
+   "C1"
+  ],
+  [
+   "C1",
+   "C2"
+  ],
+  [
+   "M3",
+   "D1"
+  ],
+  [
+   "D1",
+   "D2"
+  ],
+  [
+   "M5",
+   "E1"
+  ],
+  [
+   "E1",
+   "E2"
+  ],
+  [
+   "A2",
+   "E2"
+  ],
+  [
+   "E2",
+   "C2"
+  ],
+  [
+   "A2",
+   "z_bldA_e1"
+  ],
+  [
+   "B2",
+   "z_bldB_e1"
+  ],
+  [
+   "C2",
+   "z_bldC_e1"
+  ],
+  [
+   "stage",
+   "M0"
+  ],
+  [
+   "D2",
+   "stage"
+  ],
+  [
+   "M1",
+   "K_W"
+  ],
+  [
+   "M7",
+   "K_E"
+  ],
+  [
+   "K_W",
+   "K_NW"
+  ],
+  [
+   "K_W",
+   "K_SW"
+  ],
+  [
+   "K_E",
+   "K_NE"
+  ],
+  [
+   "K_E",
+   "K_SE"
+  ],
+  [
+   "M3",
+   "N1"
+  ],
+  [
+   "N1",
+   "N2"
+  ],
+  [
+   "N2",
+   "M4"
+  ]
+ ],
+ "overlay_edges": [
+  [
+   "tgt_A3",
+   "z_bldA_e1"
+  ],
+  [
+   "tgt_B5",
+   "z_bldB_e1"
+  ],
+  [
+   "obs_main",
+   "M3"
+  ],
+  [
+   "blind_A",
+   "z_bldA_e2"
+  ]
+ ],
+ "constraints": [
+  {
+   "type": "no_fly",
+   "ref": "z_nofly",
+   "desc": "北侧高压线禁飞带,天花板 60m"
+  },
+  {
+   "type": "comm",
+   "ref": "blind_A",
+   "desc": "A 楼背面通信盲区,需中继补链"
+  },
+  {
+   "type": "comm",
+   "ref": "blind_C",
+   "desc": "仓库区通信盲区"
+  },
+  {
+   "type": "obstacle",
+   "ref": "obs_main",
+   "desc": "路障阻断主干道 M3-M4,需绕行或清障"
+  },
+  {
+   "type": "obstacle",
+   "ref": "obs_A",
+   "desc": "废弃车辆阻断 A 支路"
+  },
+  {
+   "type": "roe",
+   "desc": "内部清查前须完成外围封控;破门需人工确认"
+  }
+ ]
+}

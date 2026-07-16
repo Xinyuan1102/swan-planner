@@ -6,6 +6,7 @@
 数据流:JSON 场景 + 平台能力 → PlannerEngine 能力匹配分配 → 分组树 + 推理链。
 """
 from __future__ import annotations
+from pathlib import Path
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout
 from PySide6.QtCore import Qt, QThread, Signal, QObject
 
@@ -21,7 +22,10 @@ from .widgets.task_panel import TaskPanel
 from .widgets.reasoning_chain import ReasoningChain
 from .widgets.timeline import Timeline
 
-SCOPE = {"A": "全局 · A 组", "B": "全局 · B 组", "C": "全局 · C 组"}
+# 默认场景:社区片区(主干道 + 支路 + 3 栋建筑),100 台平台
+_DATA = Path(__file__).resolve().parent / "data" / "scenarios"
+SCENARIO_SCENE = _DATA / "large_scene.json"
+SCENARIO_PLATFORMS = _DATA / "large_platforms.json"
 
 
 class GlobalPlanWorker(QObject):
@@ -45,8 +49,8 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(stylesheet())
 
         # ---- 后端:场景 + 平台能力 + 规划引擎 ----
-        self.scene = load_scene()
-        self.platforms = load_platforms()
+        self.scene = load_scene(SCENARIO_SCENE)
+        self.platforms = load_platforms(SCENARIO_PLATFORMS)
         self.engine = PlannerEngine(self.scene, self.platforms)
         self.global_plan: GlobalPlan | None = None
         self._current_group = "A"
@@ -97,7 +101,8 @@ class MainWindow(QMainWindow):
         if self.global_plan is None:
             return
         result = self.engine.assemble(self.global_plan, gid)
-        self.chain.render_plan(result, SCOPE.get(gid, "全局"))
+        g = self.global_plan.group(gid)
+        self.chain.render_plan(result, g.name if g else "全局")
 
     # ---- 任务下达:重新全局规划 ----
     def _on_plan_requested(self, text: str):
