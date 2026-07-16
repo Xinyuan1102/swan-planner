@@ -281,6 +281,28 @@ class PlannerEngine:
                  RoleSpec("gnd_relay", "链路保障", ["mesh_node"], ["comm_relay"], 2),
                  RoleSpec("air_survey", "空中监视", ["aerial_survey"], ["target_track"], 2)],
                 "cordon"))
+
+        # ---- 兼容广域侦察 / 物资运输型场景 ----
+        for z in self.scene.zones_of("survey"):
+            n = max(2, ceil(self.scene.zone_area_m2(z.zid) / 30000.0))
+            specs.append(TaskSpec(
+                "T-" + z.zid, chr(ord("A") + len(specs)), z.name + " 任务群",
+                z.attrs.get("objective", "广域侦察"),
+                z.attrs.get("priority", "P1"), z.zid,
+                [RoleSpec("air_survey", "扇区覆盖", ["aerial_survey"],
+                          ["eo_imaging", "sar_imaging", "target_track", "target_confirm"], n)],
+                "survey"))
+
+        for z in self.scene.zones_of("delivery"):
+            cargo = z.attrs.get("cargo_kg", 0)
+            specs.append(TaskSpec(
+                "T-" + z.zid, chr(ord("A") + len(specs)), z.name + " 任务群",
+                z.attrs.get("objective", "物资运输"),
+                z.attrs.get("priority", "P1"), z.zid,
+                [RoleSpec("carrier", "运输", ["transport"],
+                          ["obstacle_detect", "ground_nav"], 1, cargo),
+                 RoleSpec("escort", "中继护航", ["comm_relay"], ["escort", "recon"], 1)],
+                "transport"))
         return specs
 
     # ---------------- 可行性 / 打分 ----------------
@@ -467,7 +489,84 @@ class PlannerEngine:
             return self._l2_reserve(g), self._l3_reserve(g)
         if g.spec.kind == "cordon":
             return self._l2_cordon(g), self._l3_cordon(g)
+        if g.spec.kind == "survey":
+            return self._l2_survey(g), self._l3_survey(g)
+        if g.spec.kind == "transport":
+            return self._l2_transport(g), self._l3_transport(g)
         return self._l2_structure(g), self._l3_structure(g)
+
+    # ---- 广域侦察型 ----
+    def _l2_survey(self, g: GroupPlan) -> ReasoningNode:
+        zid = g.spec.zone
+        x0, y0, x1, y1 = self.scene.zone_bbox_m(zid)
+        width = x1 - x0
+        n = max(len(g.members), 1)
+        sectors = max(n, ceil(width / 100.0))
+        tallest = self.scene.tallest_building_near_zone(zid)
+        h = tallest.attrs.get("height_m", 0) if tallest else 0
+        alt = h + SURVEY_CLEARANCE_M
+        think = ("读取区域多边形,面积 <kv>%.0fm²</kv>、宽 %.0fm。按扫描带宽 100m "
+                 "<b>划分为 %d 个扇区</b>,%d 架 UAV 分担。扫描高度 = 最高建筑 %dm + 余量 "
+                 "%.0fm = <kv>%.0fm AGL</kv>;目标 conf>0.85 即转跟踪。"
+                 % (self.scene.zone_area_m2(zid), width, sectors, n, h,
+                    SURVEY_CLEARANCE_M, alt))
+        items = []
+        for i, m in enumerate(g.members):
+            mine = [f"S{j+1}" for j in range(sectors) if j % n == i]
+            extra = " + 目标复核" if "target_confirm" in m.caps else ""
+            items.append(TaskItem(g.gid, m.pid, "扇区 %s 扫描%s" % ("/".join(mine), extra)))
+        return ReasoningNode("L2", "中层 · " + g.name, MODEL_L2, think, items)
+
+    def _l3_survey(self, g: GroupPlan) -> ReasoningNode:
+        if not g.members:
+            return ReasoningNode("L3", "底层 · 无可用平台", MODEL_L3, "该组无成员。")
+        tallest = self.scene.tallest_building_near_zone(g.spec.zone)
+        alt = (tallest.attrs.get("height_m", 0) if tallest else 0) + SURVEY_CLEARANCE_M
+        m = g.members[0]
+        think = ("将 %s 的扇区扫描编译为技能序列;VL 模型做目标确认与异常检测,"
+                 "导航/避障交由经典控制栈,LLM 不入控制环。" % m.pid)
+        skills = ["goto(S1_wp, alt=%.0fm)" % alt, "scan(pattern=boustrophedon)",
+                  "vl_detect(target)", "track(if conf>0.85)", "report(scene_json)"]
+        return ReasoningNode("L3", "底层 · %s 执行" % m.pid, MODEL_L3, think, skills=skills)
+
+    # ---- 物资运输型 ----
+    def _l2_transport(self, g: GroupPlan) -> ReasoningNode:
+        route, geo, detour = self.scene.shortest_ground_path()
+        blockers = self.scene.path_blockers(route) if route else []
+        relay_alt = self.scene.no_fly_ceiling() + RELAY_CLEARANCE_M
+        carrier = next((m for m in g.members
+                        if g.assignments[m.pid].role == "carrier"), None)
+        escort = next((m for m in g.members
+                       if g.assignments[m.pid].role == "escort"), None)
+        if blockers:
+            blk = ",通路受 <kv>%s</kv> 阻断且无旁路 → 须先清障" % "、".join(b.name for b in blockers)
+        elif detour:
+            blk = ",<b>绕行</b>规避路障"
+        else:
+            blk = ",沿主干道直行"
+        think = ("在地面通行子图上求运输路径:<kv>%s</kv>,长 <kv>%.0fm</kv>%s。"
+                 "护航高度 = 禁飞天花板 %dm + 余量 %.0fm = <kv>%.0fm</kv>,"
+                 "在通信盲区前置补链。"
+                 % ("→".join(route) if route else "无可行路径", geo, blk,
+                    self.scene.no_fly_ceiling(), RELAY_CLEARANCE_M, relay_alt))
+        items = []
+        if carrier:
+            items.append(TaskItem(g.gid, carrier.pid, "沿路径运输至补给点(%.0fm)" % geo))
+        if escort:
+            items.append(TaskItem(g.gid, escort.pid, "%.0fm 伴随中继 + 前方侦察" % relay_alt))
+        return ReasoningNode("L2", "中层 · " + g.name, MODEL_L2, think, items)
+
+    def _l3_transport(self, g: GroupPlan) -> ReasoningNode:
+        if not g.members:
+            return ReasoningNode("L3", "底层 · 无可用平台", MODEL_L3, "该组无成员。")
+        route, _, _ = self.scene.shortest_ground_path()
+        carrier = next((m for m in g.members
+                        if g.assignments[m.pid].role == "carrier"), g.members[0])
+        think = ("将 %s 的运输编译为技能序列;VL 模型识别地面障碍与可通行性,"
+                 "路径跟踪/制动交由底盘控制栈。" % carrier.pid)
+        skills = ["load(cargo)", "follow(route=[%s])" % "→".join(route),
+                  "vl_obstacle_check()", "handover(delivery_zone)", "report(status)"]
+        return ReasoningNode("L3", "底层 · %s 执行" % carrier.pid, MODEL_L3, think, skills=skills)
 
     def _l2_structure(self, g: GroupPlan) -> ReasoningNode:
         z = self.scene.zones[g.spec.zone]
